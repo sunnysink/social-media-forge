@@ -777,10 +777,22 @@
     }
 
     .remaining-item {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
       padding: 14px 15px;
       background: var(--surface-2);
       border: 1px solid var(--line-2);
       border-radius: var(--radius-sm);
+    }
+
+    .remaining-item .check-control {
+      margin-top: 0;
+    }
+
+    .remaining-copy {
+      min-width: 0;
     }
 
     .remaining-item strong {
@@ -1578,6 +1590,8 @@
         batchTasks.forEach(function (task) {
           if (!state.batch[task.id]) {
             items.push({
+              type: 'batch',
+              id: task.id,
               title: task.title,
               detail: task.channel + ': ' + task.detail
             });
@@ -1590,6 +1604,8 @@
             var id = dayKey + '-' + kind.id;
             if (!state.daily[id]) {
               items.push({
+                type: 'daily',
+                id: id,
                 title: day + ': ' + kind.label,
                 detail: 'Daily morning task'
               });
@@ -1603,8 +1619,34 @@
         }
 
         els.remainingList.innerHTML = items.map(function (item) {
-          return '<div class="remaining-item"><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(item.detail) + '</span></div>';
+          return [
+            '<div class="remaining-item">',
+            '<button class="check-control" type="button" data-remaining-check="' + escapeHtml(item.id) + '" data-remaining-type="' + escapeHtml(item.type) + '" aria-pressed="false" aria-label="Mark complete: ' + escapeHtml(item.title) + '"></button>',
+            '<div class="remaining-copy">',
+            '<strong>' + escapeHtml(item.title) + '</strong>',
+            '<span>' + escapeHtml(item.detail) + '</span>',
+            '</div>',
+            '</div>'
+          ].join('');
         }).join('');
+
+        els.remainingList.querySelectorAll('[data-remaining-check]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var type = btn.getAttribute('data-remaining-type');
+            var id = btn.getAttribute('data-remaining-check');
+            var wasLast = getCounts().left === 1;
+            if (type === 'batch') {
+              state.batch[id] = true;
+            } else {
+              state.daily[id] = true;
+            }
+            btn.classList.add('checked');
+            saveState();
+            render();
+            if (wasLast) celebrate();
+            showToast('Marked complete.');
+          });
+        });
       }
 
       function getCounts() {
